@@ -1,5 +1,5 @@
-CREATE DATABASE mydb;
-USE mydb;
+CREATE DATABASE scentia;
+USE scentia;
 
 -- MySQL dump 10.13  Distrib 5.7.42, for Linux (x86_64)
 --
