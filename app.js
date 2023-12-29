@@ -103,7 +103,7 @@ app.get('/test', async (req, res) => {
     res.status(200).send({
         success: true,
         message: 'We are good !',
-        data: results
+        data: []
     });
 
 
