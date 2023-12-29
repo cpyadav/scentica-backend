@@ -98,6 +98,55 @@ app.get('/all-users', async(req, res) => {
         }
     })
 })
+app.get('/categorylist', async (req, res) => {
+    const { type } = req.query;
+
+    let query = 'SELECT * FROM category WHERE status = 1';
+    if (type) {
+        switch (type) {
+            case 'category':
+                query = 'SELECT * FROM category WHERE status = 1';
+                break;
+            case 'type':
+                query = 'SELECT * FROM product_types WHERE status = 1';
+                break;
+            // Add more cases as needed
+
+            default:
+                // Handle unknown type
+                res.status(400).send({
+                    success: false,
+                    message: 'Invalid category type'
+                });
+                return;
+        }
+    }
+   
+    pool.query(query, async (err, results) => {
+        if(err) {
+            console.error(`Error fetching ${type}: `, err.message);
+            res.status(500).send({
+                success: false,
+                message: `Error fetching ${type}`
+            });
+        }
+        else if (results.length > 0) {
+                res.status(200).send({
+                    success: true,
+                    message: `Fetching ${type} successful`,
+                    data: results
+                });
+        }
+        else {
+            res.status(404).send({
+                success: false,
+                message: 'Empty list'
+            });
+        }
+    })
+
+
+})
 app.get('/test', async (req, res) => {
 
     res.status(200).send({
