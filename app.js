@@ -98,6 +98,7 @@ app.get('/all-users', async(req, res) => {
         }
     })
 })
+
 app.get('/categorylist', async (req, res) => {
     const { type } = req.query;
 
@@ -110,7 +111,24 @@ app.get('/categorylist', async (req, res) => {
             case 'type':
                 query = 'SELECT * FROM product_types WHERE status = 1';
                 break;
-            // Add more cases as needed
+            case 'packaging':
+                query = 'SELECT * FROM product_packaging WHERE status = 1';
+                break;
+            case 'formate':
+                query = 'SELECT * FROM product_formate WHERE status = 1';
+                break;
+            case 'market':
+                query = 'SELECT * FROM product_market WHERE status = 1';
+                break;
+            case 'ingredients':
+                query = 'SELECT * FROM fragrance_ingredients WHERE status = 1';
+                break;  
+            case 'emotions':
+                query = 'SELECT * FROM fragrance_emotions WHERE status = 1';
+                break;   
+            case 'colors':
+                query = 'SELECT * FROM fragrance_colors WHERE status = 1';
+                break;             
 
             default:
                 // Handle unknown type
@@ -121,32 +139,69 @@ app.get('/categorylist', async (req, res) => {
                 return;
         }
     }
-   
-    pool.query(query, async (err, results) => {
-        if(err) {
-            console.error(`Error fetching ${type}: `, err.message);
-            res.status(500).send({
-                success: false,
-                message: `Error fetching ${type}`
-            });
-        }
-        else if (results.length > 0) {
-                res.status(200).send({
-                    success: true,
-                    message: `Fetching ${type} successful`,
-                    data: results
-                });
-        }
-        else {
-            res.status(404).send({
-                success: false,
-                message: 'Empty list'
-            });
-        }
-    })
 
+    function executeQuery(query) {
+        return new Promise((resolve, reject) => {
+            pool.query(query, (err, results) => {
+                if (err) {
+                    console.error('Error executing query: ', err.message);
+                    reject(err);
+                } else {
+                    resolve(results);
+                }
+            });
+        });
+    }
 
-})
+    try {
+        const results = await executeQuery(query);
+
+        if (type == 'market') {
+            for (let index = 0; index < results.length; index++) {
+                const marketEntry = results[index];
+                const locationQuery = `
+                    SELECT id, name
+                    FROM locations
+                    WHERE id IN (${marketEntry.location})
+                `;
+
+                // Execute the location query for each market entry
+                const locationResults = await executeQuery(locationQuery);
+
+                // Add location data to market entry
+                results[index].location_data = locationResults;
+            }
+        }
+        if (type == 'ingredients') {
+            for (let index = 0; index < results.length; index++) {
+                const marketEntry = results[index];
+                const locationQuery = `
+                    SELECT id, name,image
+                    FROM fragrance_ingredients_images
+                    WHERE id IN (${marketEntry.ingradient_id})
+                `;
+
+                // Execute the location query for each market entry
+                const locationResults = await executeQuery(locationQuery);
+
+                // Add location data to market entry
+                results[index].location_data = locationResults;
+            }
+        }
+        res.status(200).send({
+            success: true,
+            message: `Fetching ${type} successful`,
+            data: results
+        });
+    } catch (err) {
+        console.error(`Error fetching ${type}: `, err.message);
+        res.status(500).send({
+            success: false,
+            message: `Error fetching ${type}`
+        });
+    }
+});
+
 app.get('/test', async (req, res) => {
 
     res.status(200).send({
