@@ -204,13 +204,29 @@ app.get('/categorylist', async (req, res) => {
 });
 
 app.get('/test', async (req, res) => {
-
-    res.status(200).send({
-        success: true,
-        message: 'We are good !',
-        data: []
-    });
-
+    let query = 'SELECT * FROM category WHERE status = 1';
+    pool.query(query, async (err, results) => {
+        if(err) {
+            console.error('Error fetching users: ', err.message);
+            res.status(500).send({
+                success: false,
+                message: 'Error fetching users'
+            });
+        }
+        else if (results.length > 0) {
+                res.status(200).send({
+                    success: true,
+                    message: 'Fetching users successful',
+                    data: results
+                });
+        }
+        else {
+            res.status(404).send({
+                success: false,
+                message: 'Empty list'
+            });
+        }
+    })
 
 })
 app.listen(port, () => {
