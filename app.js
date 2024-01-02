@@ -142,6 +142,7 @@ app.get('/categorylist', async (req, res) => {
 
     function executeQuery(query) {
         return new Promise((resolve, reject) => {
+            console.log(pool);
             pool.query(query, (err, results) => {
                 if (err) {
                     console.error('Error executing query: ', err.message);
@@ -155,7 +156,7 @@ app.get('/categorylist', async (req, res) => {
 
     try {
         var results = await executeQuery(query);
-
+        console.log("query +++++++",query);
         if (type == 'market') {
             for (let index = 0; index < results.length; index++) {
                 const marketEntry = results[index];
