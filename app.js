@@ -128,8 +128,14 @@ app.get('/categorylist', async (req, res) => {
                 break;   
             case 'colors':
                 query = 'SELECT * FROM fragrance_colors WHERE status = 1';
-                break;             
-
+                break;        
+            case 'oflactive_dir':
+                query = 'SELECT * FROM fragrance_olfa_dir WHERE status = 1';
+                break;                 
+            case 'smell':
+                query = 'SELECT * FROM fragrance_smell WHERE status = 1';
+                break;  
+                
             default:
                 // Handle unknown type
                 res.status(400).send({
@@ -202,7 +208,26 @@ app.get('/categorylist', async (req, res) => {
         });
     }
 });
-
+app.post('/client_briefing', async (req, res) => {
+    const {username, password} = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    pool.query('INSERT INTO users (username, password) VALUES (?,?)', [username, hashedPassword], (err, results) => {
+        if(err) {
+            console.error('Error creating user: ', err.message)
+            res.status(500).send({
+                success: false,
+                message: 'Error creating user'
+            })
+        }
+        else {
+            res.status(200).send({
+                success: true,
+                message: 'User created successfully'
+            })
+        }
+    })
+})
 app.get('/test', async (req, res) => {
     let query = 'SELECT * FROM category WHERE status = 1';
     pool.query(query, async (err, results) => {
