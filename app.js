@@ -208,11 +208,57 @@ app.get('/categorylist', async (req, res) => {
         });
     }
 });
-app.post('/client_briefing', async (req, res) => {
-    const {username, password} = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    pool.query('INSERT INTO users (username, password) VALUES (?,?)', [username, hashedPassword], (err, results) => {
+app.post('/save_client_briefing', async (req, res) => {
+    const data = req.body;
+    // Function to convert arrays to comma-separated strings only if present
+    const convertArraysToStrings = (obj) => {
+        for (const key in obj) {
+            if (Array.isArray(obj[key])) {
+                obj[key] = obj[key].join(',');
+            } else if (typeof obj[key] === 'object') {
+                convertArraysToStrings(obj[key]);
+            }
+        }
+    };
+    // Convert arrays to comma-separated strings only if present
+    convertArraysToStrings(data);
+
+    const query = `
+    INSERT INTO clent_briefing (user_id,company_name, industry, brand_vision, name, category, type, packaging, size, formate, market, price, benchmark, web_link, age_gp, gender, tg_user_occup, smell, oflactive_dir, ingredients, emotions, colors, dosage, price_range, ref_link,market_location,target_user_lifestyle,target_user_behaviour,status, created_date)
+    VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,1, NOW())
+  `;
+
+  const values = [
+    data.user_id,
+    data.company_name,
+    data.industry,
+    data.brand_vision,
+    data.name,
+    data.category,
+    data.type,
+    data.packaging,
+    data.size,
+    data.formate,
+    data.market,
+    data.price,
+    data.benchmark,
+    data.web_link,
+    data.age_gp,
+    data.gender,
+    data.tg_user_occup,
+    data.smell,
+    data.oflactive_dir,
+    data.ingredients,
+    data.emotions,
+    data.colors,
+    data.dosage,
+    data.price_range,
+    data.ref_link,
+    data.market_location,
+    data.target_user_lifestyle,
+    data.target_user_behaviour,
+  ];
+    pool.query(query, values, (err, results) => {
         if(err) {
             console.error('Error creating user: ', err.message)
             res.status(500).send({
@@ -223,7 +269,7 @@ app.post('/client_briefing', async (req, res) => {
         else {
             res.status(200).send({
                 success: true,
-                message: 'User created successfully'
+                message: 'Client details created successfully'
             })
         }
     })
