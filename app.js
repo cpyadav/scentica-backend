@@ -3,8 +3,8 @@ const bodyParser = require('body-parser');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
 const mysql = require('mysql');
+const cors = require('cors'); // Add this line
 const dbConfig = require('./dbConfig');
-
 const app = express();
 const port = 5000;
 
@@ -12,7 +12,7 @@ const port = 5000;
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(session({ secret: 'test123', resave: true, saveUninitialized: true }))
-
+app.use(cors());
 // Create a connection pool
 const pool = mysql.createPool(dbConfig);
 
