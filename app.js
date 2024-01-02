@@ -154,7 +154,7 @@ app.get('/categorylist', async (req, res) => {
     }
 
     try {
-        const results = await executeQuery(query);
+        var results = await executeQuery(query);
 
         if (type == 'market') {
             for (let index = 0; index < results.length; index++) {
