@@ -11,37 +11,166 @@ const port = 5000;
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+const jwt = require('jsonwebtoken');
+const secretKey = 'your_secret_key';
+const saltRounds = 10;
 app.use(session({ secret: 'test123', resave: true, saveUninitialized: true }))
 app.use(cors());
 // Create a connection pool
 const pool = mysql.createPool(dbConfig);
 
 // Routes
-app.post('/signup', async (req, res) => {
-    const {username, password} = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
+
+const verifyToken = (req, res, next) => {
+    const token = req.headers['authorization'];
+
+    if (!token) {
+        return res.status(403).json({ error: 'Token not provided' });
+    }
+
+    jwt.verify(token, secretKey, (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+        req.userId = decoded.id;
+        next();
+    });
+};
+    app.post('/signup33', async (req, res) => {
+    const data = req.body;
+
+        // Hash and salt the password using bcrypt
+        const hashedPassword = await bcrypt.hash(data.password, saltRounds);
+        data.password = hashedPassword;
+        const resetTokenExpiry = new Date();
+        resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1);
+        const query = `
+        INSERT INTO users (firstname,lastname, email, jobtitle, phone, country, companyname, term_accepted, account_approved, password, reset_token, reset_token_expiry, status,created_date)
+        VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+      `;
     
-    pool.query('INSERT INTO users (username, password) VALUES (?,?)', [username, hashedPassword], (err, results) => {
-        if(err) {
-            console.error('Error creating user: ', err.message)
-            res.status(500).send({
-                success: false,
-                message: 'Error creating user'
-            })
-        }
-        else {
-            res.status(200).send({
-                success: true,
-                message: 'User created successfully'
-            })
-        }
-    })
+      const values = [
+        data.firstname,
+        data.lastname,
+        data.email,
+        data.jobtitle,
+        data.phone,
+        data.country,
+        data.companyname,
+        data.term_accepted,
+        data.account_approved,
+        data.password,
+        data.reset_token,
+        resetTokenExpiry,
+        data.status
+      ];
+pool.query(query, values, (err, results) => {
+    if(err) {
+        console.error('Error creating user: ', err.message)
+        res.status(500).send({
+            success: false,
+            message: 'Error creating user'
+        })
+    }
+    else {
+
+
+        res.status(200).send({
+            success: true,
+            message: 'Client details created successfully',
+            data: data
+        })
+    }
+})
 })
 
-app.post('/login', async(req, res) => {
-    const {username, password} = req.body;
+app.post('/signup', async (req, res) => {
+    const data = req.body;
 
-    pool.query('SELECT * FROM users WHERE username = ?', [username], async (err, results) => {
+    try {
+        // Hash and salt the password using bcrypt
+        const hashedPassword = await bcrypt.hash(data.password, saltRounds);
+        data.password = hashedPassword;
+        const resetTokenExpiry = new Date();
+        resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1);
+        // Insert user data into the database
+        const insertQuery = `
+            INSERT INTO users (firstname, lastname, email, jobtitle, phone, country, companyname, term_accepted, account_approved, password, reset_token, reset_token_expiry, status, created_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        `;
+        const insertValues = [
+            data.firstname,
+            data.lastname,
+            data.email,
+            data.jobtitle,
+            data.phone,
+            data.country,
+            data.companyname,
+            data.term_accepted,
+            data.account_approved,
+            data.password,
+            data.reset_token,
+            resetTokenExpiry,
+            data.status
+        ];
+        // Execute the insert query
+        const insertResults = await pool.query(insertQuery, insertValues);
+        // Get the last inserted ID
+        const lastInsertedId = insertResults.insertId;
+        console.log('Last Inserted ID:', lastInsertedId);
+            // Generate JWT token
+            const token = jwt.sign({ id: lastInsertedId }, secretKey, { expiresIn: '1h' });
+            res.setHeader('Authorization', `Bearer ${token}`);
+            // Create response object
+            const objToken = {
+                access_token: token,
+                reset_token: data.reset_token,
+                reset_token_expiry: resetTokenExpiry,
+                status: data.status,
+            };
+            res.status(200).send({
+                success: true,
+                message: 'Client details created successfully',
+                data: objToken
+            });
+        
+    } catch (error) {
+        console.error('Error creating user:', error.message);
+        res.status(500).send({
+            success: false,
+            message: 'Error creating user'
+        });
+    }
+});
+
+app.post('/login11', (req, res) => {
+    const { email, password } = req.body;
+
+    const query = 'SELECT * FROM users WHERE email = ?';
+    pool.query(query, [email], async (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: 'Internal Server Error' });
+        }
+        if (results.length === 1) {
+            const user = results[0];
+
+            // Verify the password using bcrypt
+            const passwordMatch = await bcrypt.compare(password, user.password);
+
+            if (passwordMatch) {
+                const token = jwt.sign({ id: user.id }, secretKey, { expiresIn: '1h' });
+                res.json({ token });
+            } else {
+                res.status(401).json({ error: 'Invalid credentials' });
+            }
+        } else {
+            res.status(401).json({ error: 'Invalid credentials' });
+        }
+    });
+});
+app.post('/login', async(req, res) => {
+    const {email, password} = req.body;
+    pool.query('SELECT * FROM users WHERE email = ?', [email], async (err, results) => {
         if(err) {
             console.error('Error fetching user: ', err.message);
             res.status(500).send({
@@ -50,12 +179,23 @@ app.post('/login', async(req, res) => {
             });
         }
         else if (results.length > 0) {
-            const match = await bcrypt.compare(password, results[0].password);
+            const match =  await bcrypt.compare(password, results[0].password);
             if(match) {
-                req.session.userId = results[0].id;
+                const token = jwt.sign({ id: results[0].id }, secretKey, { expiresIn: '1h' });
+                res.setHeader('Authorization', `Bearer ${token}`);
+
+                const objToken ={
+                    access_token :token,
+                    reset_token : results[0].reset_token,
+                    reset_token_expiry:results[0].reset_token_expiry,
+                    status: results[0].status,
+                }
+                //req.session.userId = results[0].id;
+                
                 res.status(200).send({
                     success: true,
-                    message: 'Login successful'
+                    message: 'Login successful',
+                    data: objToken
                 });
             }
             else {
@@ -73,6 +213,30 @@ app.post('/login', async(req, res) => {
         }
     })
 })
+app.get('/protected-route', async (req, res) => {
+    // Get the token from the Authorization header
+    const token = req.headers['authorization'];
+
+    if (!token) {
+        return res.status(403).json({ error: 'Token not provided' });
+    }
+
+    try {
+        // Verify the token and extract user ID
+        const decoded = jwt.verify(token.split(' ')[1], secretKey);
+        const userId = decoded.id;
+
+        // You can now use the userId in your route logic
+
+        res.status(200).json({
+            success: true,
+            message: 'Access granted',
+            userId: userId
+        });
+    } catch (err) {
+        res.status(401).json({ error: 'Invalid token' });
+    }
+});
 
 app.get('/all-users', async(req, res) => {
     pool.query('SELECT * FROM users', async (err, results) => {
@@ -98,10 +262,81 @@ app.get('/all-users', async(req, res) => {
         }
     })
 })
-
+app.post('/client-data', async(req, res) => {
+    const {user_id} = req.body;
+    const query1 = `SELECT
+    clent_briefing.*,
+    GROUP_CONCAT(DISTINCT fragrance_smell.name ORDER BY fragrance_smell.id) AS smell_names,
+    GROUP_CONCAT(DISTINCT fragrance_olfa_dir.name ORDER BY fragrance_olfa_dir.id) AS olfa_dir_names,
+    GROUP_CONCAT(DISTINCT fragrance_ingredients.name ORDER BY fragrance_ingredients.id) AS ingredients_names,
+    GROUP_CONCAT(DISTINCT fragrance_emotions.name ORDER BY fragrance_emotions.id) AS emotions_names,
+    GROUP_CONCAT(DISTINCT fragrance_colors.name ORDER BY fragrance_colors.id) AS colors_names
+FROM
+clent_briefing
+INNER JOIN
+    fragrance_smell ON FIND_IN_SET(fragrance_smell.id, clent_briefing.smell)
+INNER JOIN
+    fragrance_olfa_dir ON FIND_IN_SET(fragrance_olfa_dir.id, clent_briefing.oflactive_dir)
+INNER JOIN
+    fragrance_ingredients ON FIND_IN_SET(fragrance_ingredients.id, clent_briefing.ingredients)
+INNER JOIN
+    fragrance_emotions ON FIND_IN_SET(fragrance_emotions.id, clent_briefing.emotions)
+INNER JOIN
+    fragrance_colors ON FIND_IN_SET(fragrance_colors.id, clent_briefing.colors)
+WHERE
+clent_briefing.user_id = 1
+GROUP BY
+clent_briefing.id;
+ `;
+ const query = `SELECT
+    clent_briefing.*,
+    GROUP_CONCAT(DISTINCT fragrance_smell.name ORDER BY fragrance_smell.id) AS smell_names,
+    GROUP_CONCAT(DISTINCT fragrance_olfa_dir.name ORDER BY fragrance_olfa_dir.id) AS olfa_dir_names,
+    GROUP_CONCAT(DISTINCT fragrance_ingredients.name ORDER BY fragrance_ingredients.id) AS ingredients_names,
+    GROUP_CONCAT(DISTINCT fragrance_emotions.name ORDER BY fragrance_emotions.id) AS emotions_names,
+    GROUP_CONCAT(DISTINCT fragrance_colors.name ORDER BY fragrance_colors.id) AS colors_names
+FROM
+clent_briefing
+INNER JOIN
+    fragrance_smell ON FIND_IN_SET(fragrance_smell.id, clent_briefing.smell)
+INNER JOIN
+    fragrance_olfa_dir ON FIND_IN_SET(fragrance_olfa_dir.id, clent_briefing.oflactive_dir)
+INNER JOIN
+    fragrance_ingredients ON FIND_IN_SET(fragrance_ingredients.id, clent_briefing.ingredients)
+INNER JOIN
+    fragrance_emotions ON FIND_IN_SET(fragrance_emotions.id, clent_briefing.emotions)
+INNER JOIN
+    fragrance_colors ON FIND_IN_SET(fragrance_colors.id, clent_briefing.colors)
+WHERE
+clent_briefing.user_id = 1
+GROUP BY
+clent_briefing.id;
+ `;
+    pool.query(`SELECT * FROM clent_briefing where user_id=${user_id}`, async (err, results) => {
+        if(err) {
+            console.error('Error fetching users: ', err.message);
+            res.status(500).send({
+                success: false,
+                message: 'Error fetching users'
+            });
+        }
+        else if (results.length > 0) {
+                res.status(200).send({
+                    success: true,
+                    message: 'Fetching users successful',
+                    data: results
+                });
+        }
+        else {
+            res.status(404).send({
+                success: false,
+                message: 'Empty list'
+            });
+        }
+    })
+})
 app.get('/categorylist', async (req, res) => {
-    const { type } = req.query;
-
+    const { type,catId } = req.query;
     let query = 'SELECT * FROM category WHERE status = 1';
     if (type) {
         switch (type) {
@@ -109,13 +344,13 @@ app.get('/categorylist', async (req, res) => {
                 query = 'SELECT * FROM category WHERE status = 1';
                 break;
             case 'type':
-                query = 'SELECT * FROM product_types WHERE status = 1';
+                query = `SELECT * FROM product_types WHERE category=${catId} and status = 1`;
                 break;
             case 'packaging':
-                query = 'SELECT * FROM product_packaging WHERE status = 1';
+                query = `SELECT * FROM product_packaging WHERE  category=${catId} and status = 1`;
                 break;
             case 'formate':
-                query = 'SELECT * FROM product_formate WHERE status = 1';
+                query = `SELECT * FROM product_formate WHERE category=${catId} and status = 1`;
                 break;
             case 'market':
                 query = 'SELECT * FROM product_market WHERE status = 1';
@@ -148,7 +383,7 @@ app.get('/categorylist', async (req, res) => {
 
     function executeQuery(query) {
         return new Promise((resolve, reject) => {
-            console.log(pool);
+            
             pool.query(query, (err, results) => {
                 if (err) {
                     console.error('Error executing query: ', err.message);
@@ -162,7 +397,6 @@ app.get('/categorylist', async (req, res) => {
 
     try {
         var results = await executeQuery(query);
-        console.log("query +++++++",query);
         if (type == 'market') {
             for (let index = 0; index < results.length; index++) {
                 const marketEntry = results[index];
