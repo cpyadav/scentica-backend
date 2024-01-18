@@ -96,7 +96,7 @@ app.post('/signup', async (req, res) => {
         // Insert user data into the database
         const insertQuery = `
             INSERT INTO users (firstname, lastname, email, jobtitle, phone, country, companyname, term_accepted, account_approved, password, reset_token, reset_token_expiry, status, created_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, NOW())
         `;
         const insertValues = [
             data.firstname,
@@ -109,7 +109,6 @@ app.post('/signup', async (req, res) => {
             data.term_accepted,
             data.account_approved,
             data.password,
-            data.reset_token,
             resetTokenExpiry,
             data.status
         ];
