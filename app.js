@@ -115,9 +115,9 @@ app.post('/signup', async (req, res) => {
         // Execute the insert query
         const insertResults = await pool.query(insertQuery, insertValues);
         // Get the last inserted ID
-        const lastInsertedId = insertResults && (insertResults.insertId || (insertResults && insertResults[0] && insertResults[0].insertId));
+       // const lastInsertedId = insertResults && (insertResults.insertId || (insertResults && insertResults[0] && insertResults[0].insertId));
             // Generate JWT token
-            const token = jwt.sign({ id: lastInsertedId }, secretKey, { expiresIn: '1h' });
+            const token = jwt.sign({ id: 1 }, secretKey, { expiresIn: '1h' });
             res.setHeader('Authorization', `Bearer ${token}`);
             // Create response object
             const objToken = {
