@@ -363,7 +363,27 @@ app.get('/categorylist', async (req, res) => {
           query = `SELECT * FROM product_packaging WHERE  category=${catId} and status = 1`;
           break;
         // ... other cases ...
-
+        case 'formate':
+        query = `SELECT * FROM product_formate WHERE category=${catId} and status = 1`;
+        break;
+        case 'market':
+            query = 'SELECT * FROM product_market WHERE status = 1';
+            break;
+        case 'ingredients':
+            query = 'SELECT * FROM fragrance_ingredients WHERE status = 1';
+            break;  
+        case 'emotions':
+            query = 'SELECT * FROM fragrance_emotions WHERE status = 1';
+            break;   
+        case 'colors':
+            query = 'SELECT * FROM fragrance_colors WHERE status = 1';
+            break;        
+        case 'oflactive_dir':
+            query = 'SELECT * FROM fragrance_olfa_dir WHERE status = 1';
+            break;                 
+        case 'smell':
+            query = 'SELECT * FROM fragrance_smell WHERE status = 1';
+            break;  
         default:
           // Handle unknown type
           res.status(400).send({
