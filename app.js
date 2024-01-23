@@ -5,6 +5,8 @@ const bcrypt = require('bcrypt');
 const mysql = require('mysql2/promise');
 const cors = require('cors'); // Add this line
 const dbConfig = require('./dbConfig');
+const nodemailer = require('nodemailer');
+const pdf = require('html-pdf');
 const app = express();
 const port = 5000;
 
@@ -21,6 +23,112 @@ const pool = mysql.createPool(dbConfig);
 
 // Routes
 
+
+app.post('/send-email', async (req, res) => {
+    try {
+      // Generate PDF from HTML
+  
+      // Send email with PDF attachment
+      const ss =`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTML to PDF</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 20px auto;
+      background-color: #ffffff;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+
+    h1, h2, p {
+      margin-bottom: 10px;
+    }
+
+    a {
+      color: #3498db;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Your PDF Title</h1>
+
+    <p>This is an example HTML content that you can convert to a PDF. Customize the content as needed.</p>
+
+    <h2>Section 1</h2>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla facilisi. Suspendisse potenti.</p>
+
+    <h2>Section 2</h2>
+    <p>Curabitur non nulla sit amet nisl tempus convallis quis ac lectus. Cras ultricies ligula sed magna dictum porta.</p>
+
+    <p>For more information, visit our <a href="https://www.example.com">website</a>.</p>
+  </div>
+</body>
+</html>
+`
+const pdfBuffer = await generatePdf(ss);
+
+      await sendEmail(req.body.to, req.body.subject, req.body.text, pdfBuffer);
+  
+      res.status(200).json({ success: true, message: 'Email sent successfully.' });
+    } catch (error) {
+      console.error('Error sending email:', error);
+      res.status(500).json({ success: false, message: 'Error sending email.' });
+    }
+  });
+
+  const generatePdf = (html) => {
+    return new Promise((resolve, reject) => {
+      pdf.create(html).toBuffer((err, buffer) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(buffer);
+        }
+      });
+    });
+  };
+
+  const sendEmail = async (to, subject, text, pdfBuffer) => {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: 'cpyadav2010@gmail.com', // replace with your email
+        pass: 'rmds ekus bdmt erqf', // replace with your password
+      },
+    });
+  
+    const mailOptions = {
+      from: 'cpyadav2010@gmail.com',
+      to: 'cpyadav2010@gmail.com',
+      subject: subject,
+      text: text,
+      attachments: [
+        {
+          filename: 'document.pdf',
+          content: pdfBuffer,
+        },
+      ],
+    };
+  
+    await transporter.sendMail(mailOptions);
+  };
 const verifyToken = (req, res, next) => {
     const token = req.headers['authorization'];
 
@@ -271,79 +379,7 @@ app.get('/all-users', async(req, res) => {
         }
     })
 })
-app.post('/client-data', async(req, res) => {
-    const {user_id} = req.body;
-    const query1 = `SELECT
-    clent_briefing.*,
-    GROUP_CONCAT(DISTINCT fragrance_smell.name ORDER BY fragrance_smell.id) AS smell_names,
-    GROUP_CONCAT(DISTINCT fragrance_olfa_dir.name ORDER BY fragrance_olfa_dir.id) AS olfa_dir_names,
-    GROUP_CONCAT(DISTINCT fragrance_ingredients.name ORDER BY fragrance_ingredients.id) AS ingredients_names,
-    GROUP_CONCAT(DISTINCT fragrance_emotions.name ORDER BY fragrance_emotions.id) AS emotions_names,
-    GROUP_CONCAT(DISTINCT fragrance_colors.name ORDER BY fragrance_colors.id) AS colors_names
-FROM
-clent_briefing
-INNER JOIN
-    fragrance_smell ON FIND_IN_SET(fragrance_smell.id, clent_briefing.smell)
-INNER JOIN
-    fragrance_olfa_dir ON FIND_IN_SET(fragrance_olfa_dir.id, clent_briefing.oflactive_dir)
-INNER JOIN
-    fragrance_ingredients ON FIND_IN_SET(fragrance_ingredients.id, clent_briefing.ingredients)
-INNER JOIN
-    fragrance_emotions ON FIND_IN_SET(fragrance_emotions.id, clent_briefing.emotions)
-INNER JOIN
-    fragrance_colors ON FIND_IN_SET(fragrance_colors.id, clent_briefing.colors)
-WHERE
-clent_briefing.user_id = 1
-GROUP BY
-clent_briefing.id;
- `;
- const query = `SELECT
-    clent_briefing.*,
-    GROUP_CONCAT(DISTINCT fragrance_smell.name ORDER BY fragrance_smell.id) AS smell_names,
-    GROUP_CONCAT(DISTINCT fragrance_olfa_dir.name ORDER BY fragrance_olfa_dir.id) AS olfa_dir_names,
-    GROUP_CONCAT(DISTINCT fragrance_ingredients.name ORDER BY fragrance_ingredients.id) AS ingredients_names,
-    GROUP_CONCAT(DISTINCT fragrance_emotions.name ORDER BY fragrance_emotions.id) AS emotions_names,
-    GROUP_CONCAT(DISTINCT fragrance_colors.name ORDER BY fragrance_colors.id) AS colors_names
-FROM
-clent_briefing
-INNER JOIN
-    fragrance_smell ON FIND_IN_SET(fragrance_smell.id, clent_briefing.smell)
-INNER JOIN
-    fragrance_olfa_dir ON FIND_IN_SET(fragrance_olfa_dir.id, clent_briefing.oflactive_dir)
-INNER JOIN
-    fragrance_ingredients ON FIND_IN_SET(fragrance_ingredients.id, clent_briefing.ingredients)
-INNER JOIN
-    fragrance_emotions ON FIND_IN_SET(fragrance_emotions.id, clent_briefing.emotions)
-INNER JOIN
-    fragrance_colors ON FIND_IN_SET(fragrance_colors.id, clent_briefing.colors)
-WHERE
-clent_briefing.user_id = 1
-GROUP BY
-clent_briefing.id;
- `;
-    pool.query(`SELECT * FROM clent_briefing where user_id=${user_id}`, async (err, results) => {
-        if(err) {
-            console.error('Error fetching users: ', err.message);
-            res.status(500).send({
-                success: false,
-                message: 'Error fetching users'
-            });
-        }
-        else if (results.length > 0) {
-                res.status(200).send({
-                    success: true,
-                    message: 'Fetching users successful',
-                    data: results
-                });
-        }
-        else {
-            res.status(404).send({
-                success: false,
-                message: 'Empty list'
-            });
-        }
-    })
-})
+
 
 app.get('/categorylist', async (req, res) => {
   const { type, catId } = req.query;
@@ -459,6 +495,187 @@ async function executeQuery(query) {
   }
 }
 
+async function executeQueryIN(query) {
+  const connection = await pool.getConnection();
+  try {
+    const [results] = await connection.query(query);
+    return results;
+  } catch (error) {
+    console.error('Error executing query: ', error.message);
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+app.get('/all-client-data', async (req, res) => {
+    const {clientId } = req.query;
+    if(clientId){
+       var query = `SELECT
+      y.id,
+      y.user_id,
+      y.company_name,
+      y.industry,
+      y.brand_vision,
+      y.name,
+      y.category,
+      y.type,
+      y.packaging,
+      y.size,
+      y.formate,
+      pf.name AS formate_name,
+      pt.name AS type_name,
+      c.name AS category_name,
+      y.market,
+      y.price,
+      y.benchmark,
+      y.web_link,
+      y.age_gp,
+      y.gender,
+      y.tg_user_occup,
+      y.smell,
+      y.oflactive_dir,
+      y.ingredients,
+      y.emotions,
+      y.colors,
+      y.dosage,
+      y.price_range,
+      y.ref_link,
+      y.market_location,
+      y.target_user_lifestyle,
+      y.target_user_behaviour,
+      y.status,
+      y.created_date
+  FROM
+      clent_briefing y
+  INNER JOIN
+      product_formate pf ON y.formate = pf.id
+  INNER JOIN
+      product_types pt ON y.type = pt.id
+  INNER JOIN
+      category c ON y.category = c.id
+  WHERE
+      y.user_id = 1 and y.id=${clientId} `;
+    }else {
+      var query = `SELECT
+    y.id,
+    y.user_id,
+    y.company_name,
+    y.industry,
+    y.brand_vision,
+    y.name,
+    y.category,
+    y.type,
+    y.packaging,
+    y.size,
+    y.formate,
+    pf.name AS formate_name,
+    pt.name AS type_name,
+    c.name AS category_name,
+    y.market,
+    y.price,
+    y.benchmark,
+    y.web_link,
+    y.age_gp,
+    y.gender,
+    y.tg_user_occup,
+    y.smell,
+    y.oflactive_dir,
+    y.ingredients,
+    y.emotions,
+    y.colors,
+    y.dosage,
+    y.price_range,
+    y.ref_link,
+    y.market_location,
+    y.target_user_lifestyle,
+    y.target_user_behaviour,
+    y.status,
+    y.created_date
+FROM
+    clent_briefing y
+INNER JOIN
+    product_formate pf ON y.formate = pf.id
+INNER JOIN
+    product_types pt ON y.type = pt.id
+INNER JOIN
+    category c ON y.category = c.id
+WHERE
+    y.user_id = 1 order by created_date desc `;
+    }
+    // Execute the query using the promise-based API
+    const results = await executeQuery(query);
+    try {
+      const modifiedResults = await Promise.all(results.map(async (result) => {
+        // Extract the "oflactive_dir" string and split it into an array
+        const oflactiveDirArray = result.oflactive_dir ? result.oflactive_dir.split(',').map(Number) : [];
+         
+        // Fetch additional data for "oflactive_dir" from the fragrance_smell table
+       let  oflactive_Query  =[];
+        if(result.oflactive_dir){
+          const oflactive_dirQuery = `SELECT * FROM fragrance_olfa_dir WHERE status = 1 AND id IN (${result.oflactive_dir})`;
+           oflactive_Query = await executeQueryIN(oflactive_dirQuery);
+        }
+        let smellData =[];
+         if(result && result.smell){
+          const smellDataQuery = `SELECT * FROM fragrance_smell WHERE status = 1 AND id IN (${result.smell})`;
+           smellData = await executeQueryIN(smellDataQuery);
+         }
+         
+         let colorsData =[];
+         if(result && result.colors){ 
+         const colorsDataQuery = `SELECT * FROM fragrance_colors WHERE status = 1 AND id IN (${result.colors})`;
+          colorsData = await executeQueryIN(colorsDataQuery);
+         }
+         let emotionsData=[];
+        if(result && result.emotions){
+          const emotionsDataQuery = `SELECT * FROM fragrance_emotions WHERE status = 1 AND id IN (${result.emotions})`;
+           emotionsData = await executeQueryIN(emotionsDataQuery);
+        }
+        let ingredientsData=[];
+        if(result && result.ingredients){
+          const ingredientsDataQuery = `SELECT * FROM fragrance_ingredients WHERE status = 1 AND id IN (${result.ingredients})`;
+          ingredientsData = await executeQueryIN(ingredientsDataQuery);
+          if (ingredientsData && ingredientsData.length > 0) {
+            var modifiedResultsIngradients = await Promise.all(ingredientsData.map(async (resultingradients) => {
+             let  ingradientsImg =[]
+              if(resultingradients && resultingradients.ingradient_id){
+                const ingradientsImageQuery = `SELECT * FROM fragrance_ingredients_images WHERE status = 1 AND id IN (${resultingradients.ingradient_id})`;
+                ingradientsImg = await executeQueryIN(ingradientsImageQuery);
+              }
+              return {
+              ...resultingradients,
+              ingradientsImg:ingradientsImg
+            };
+            }));
+          }
+        }
+        
+        
+        // Add the new data to the result object
+        return {
+            ...result,
+            oflactive_dir: oflactive_Query,
+            emotions: emotionsData,  // Add your logic to fetch emotions data
+            colors: colorsData,    // Add your logic to fetch colors data
+            smell: smellData,  
+            ingredients: modifiedResultsIngradients   // Add your logic to fetch smell data
+        };
+  
+      }));
+        res.status(200).send({
+            success: true,
+            message: `Fetching  data successful`,
+            data: modifiedResults,
+        });
+    } catch (err) {
+        console.error(`Error fetching data`, err.message);
+        res.status(500).send({
+            success: false,
+            message: `Error fetching `,
+        });
+    }
+}
+);
 // app.get('/categorylist', async (req, res) => {
 //     const { type,catId } = req.query;
 //     let query = 'SELECT * FROM category WHERE status = 1';
