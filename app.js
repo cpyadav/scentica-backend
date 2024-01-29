@@ -7,7 +7,10 @@ const cors = require('cors'); // Add this line
 const dbConfig = require('./dbConfig');
 const nodemailer = require('nodemailer');
 const pdf = require('html-pdf');
+const multer = require('multer');
+const path = require('path');
 const app = express();
+const upload = multer({ dest: 'uploads/' }); // Set the destination folder for uploaded files
 const port = 5000;
 
 // Middleware
@@ -15,6 +18,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 const jwt = require('jsonwebtoken');
 const secretKey = 'your_secret_key';
+const secretKeyAdmin = 'your_secret_key2024';
 const saltRounds = 10;
 app.use(session({ secret: 'test123', resave: true, saveUninitialized: true }))
 app.use(cors());
@@ -131,7 +135,6 @@ const pdfBuffer = await generatePdf(ss);
   };
 const verifyToken = (req, res, next) => {
     const token = req.headers['authorization'];
-
     if (!token) {
         return res.status(403).json({ error: 'Token not provided' });
     }
@@ -143,6 +146,20 @@ const verifyToken = (req, res, next) => {
         req.userId = decoded.id;
         next();
     });
+};
+const verifyTokenAdmin = (req, res, next) => {
+  const token = req.headers['authorization'];
+  if (!token) {
+      return res.status(403).json({ error: 'Token not provided' });
+  }
+
+  jwt.verify(token, secretKeyAdmin, (err, decoded) => {
+      if (err) {
+          return res.status(401).json({ error: 'Invalid token' });
+      }
+      req.userId = decoded.id;
+      next();
+  });
 };
     
 app.post('/signup', async (req, res) => {
@@ -283,51 +300,54 @@ app.post('/login', async (req, res) => {
   }
 });
 
-app.post('/login300', async(req, res) => {
-    const {email, password} = req.body;
-    pool.query('SELECT * FROM users WHERE email = ?', [email], async (err, results) => {
-        if(err) {
-            console.error('Error fetching user: ', err.message);
-            res.status(500).send({
-                success: false,
-                message: 'Error fetching user'
-            });
-        }
-        else if (results.length > 0) {
-            const match =  await bcrypt.compare(password, results[0].password);
-            if(match) {
-                const token = jwt.sign({ id: results[0].id }, secretKey, { expiresIn: '1h' });
-                res.setHeader('Authorization', `Bearer ${token}`);
+app.post('/adminlogin', async (req, res) => {
+  const { email, password } = req.body;
 
-                const objToken ={
-                    access_token :token,
-                    reset_token : results[0].reset_token,
-                    reset_token_expiry:results[0].reset_token_expiry,
-                    status: results[0].status,
-                }
-                //req.session.userId = results[0].id;
-                
-                res.status(200).send({
-                    success: true,
-                    message: 'Login successful',
-                    data: objToken
-                });
-            }
-            else {
-                res.status(401).send({
-                    success: false,
-                    message: 'Incorrect password'
-                });
-            }
+  try {
+    const connection = await pool.getConnection();
+
+    try {
+      const [results] = await connection.execute('SELECT * FROM admin WHERE email = ?', [email]);
+
+      if (results.length > 0) {
+        const match = await bcrypt.compare(password, results[0].password);
+
+        if (match) {
+          const token = jwt.sign({ id: results[0].id }, secretKeyAdmin, { expiresIn: '1h' });
+
+          res.setHeader('Authorization', `Bearer ${token}`);
+
+          res.status(200).send({
+            success: true,
+            message: 'Admin Login successful',
+            data: {
+              access_token: token,
+              status: results[0].status,
+            },
+          });
+        } else {
+          res.status(401).send({
+            success: false,
+            message: 'Incorrect password',
+          });
         }
-        else {
-            res.status(404).send({
-                success: false,
-                message: 'User not found'
-            });
-        }
-    })
-})
+      } else {
+        res.status(404).send({
+          success: false,
+          message: 'User not found',
+        });
+      }
+    } finally {
+      connection.release();
+    }
+  } catch (err) {
+    console.error('Error during admin login: ', err.message);
+    res.status(500).send({
+      success: false,
+      message: 'Error during admin login',
+    });
+  }
+});
 
 
 app.get('/protected-route', async (req, res) => {
@@ -676,179 +696,6 @@ WHERE
     }
 }
 );
-// app.get('/categorylist', async (req, res) => {
-//     const { type,catId } = req.query;
-//     let query = 'SELECT * FROM category WHERE status = 1';
-//     if (type) {
-//         switch (type) {
-//             case 'category':
-//                 query = 'SELECT * FROM category WHERE status = 1';
-//                 break;
-//             case 'type':
-//                 query = `SELECT * FROM product_types WHERE category=${catId} and status = 1`;
-//                 break;
-//             case 'packaging':
-//                 query = `SELECT * FROM product_packaging WHERE  category=${catId} and status = 1`;
-//                 break;
-//             case 'formate':
-//                 query = `SELECT * FROM product_formate WHERE category=${catId} and status = 1`;
-//                 break;
-//             case 'market':
-//                 query = 'SELECT * FROM product_market WHERE status = 1';
-//                 break;
-//             case 'ingredients':
-//                 query = 'SELECT * FROM fragrance_ingredients WHERE status = 1';
-//                 break;  
-//             case 'emotions':
-//                 query = 'SELECT * FROM fragrance_emotions WHERE status = 1';
-//                 break;   
-//             case 'colors':
-//                 query = 'SELECT * FROM fragrance_colors WHERE status = 1';
-//                 break;        
-//             case 'oflactive_dir':
-//                 query = 'SELECT * FROM fragrance_olfa_dir WHERE status = 1';
-//                 break;                 
-//             case 'smell':
-//                 query = 'SELECT * FROM fragrance_smell WHERE status = 1';
-//                 break;  
-                
-//             default:
-//                 // Handle unknown type
-//                 res.status(400).send({
-//                     success: false,
-//                     message: 'Invalid category type'
-//                 });
-//                 return;
-//         }
-//     }
-
-//     function executeQuery(query) {
-//         return new Promise((resolve, reject) => {
-            
-//             pool.query(query, (err, results) => {
-//                 if (err) {
-//                     console.error('Error executing query: ', err.message);
-//                     reject(err);
-//                 } else {
-//                     resolve(results);
-//                 }
-//             });
-//         });
-//     }
-
-//     try {
-//         var results = await executeQuery(query);
-//         if (type == 'market') {
-//             for (let index = 0; index < results.length; index++) {
-//                 const marketEntry = results[index];
-//                 const locationQuery = `
-//                     SELECT id, name
-//                     FROM locations
-//                     WHERE id IN (${marketEntry.location})
-//                 `;
-
-//                 // Execute the location query for each market entry
-//                 const locationResults = await executeQuery(locationQuery);
-
-//                 // Add location data to market entry
-//                 results[index].location_data = locationResults;
-//             }
-//         }
-//         if (type == 'ingredients') {
-//             for (let index = 0; index < results.length; index++) {
-//                 const marketEntry = results[index];
-//                 const locationQuery = `
-//                     SELECT id, name,image
-//                     FROM fragrance_ingredients_images
-//                     WHERE id IN (${marketEntry.ingradient_id})
-//                 `;
-
-//                 // Execute the location query for each market entry
-//                 const locationResults = await executeQuery(locationQuery);
-
-//                 // Add location data to market entry
-//                 results[index].location_data = locationResults;
-//             }
-//         }
-//         res.status(200).send({
-//             success: true,
-//             message: `Fetching ${type} successful`,
-//             data: results
-//         });
-//     } catch (err) {
-//         console.error(`Error fetching ${type}: `, err.message);
-//         res.status(500).send({
-//             success: false,
-//             message: `Error fetching ${type}`
-//         });
-//     }
-// });
-// app.post('/save_client_briefing', async (req, res) => {
-//     const data = req.body;
-//     // Function to convert arrays to comma-separated strings only if present
-//     const convertArraysToStrings = (obj) => {
-//         for (const key in obj) {
-//             if (Array.isArray(obj[key])) {
-//                 obj[key] = obj[key].join(',');
-//             } else if (typeof obj[key] === 'object') {
-//                 convertArraysToStrings(obj[key]);
-//             }
-//         }
-//     };
-//     // Convert arrays to comma-separated strings only if present
-//     convertArraysToStrings(data);
-
-//     const query = `
-//     INSERT INTO clent_briefing (user_id,company_name, industry, brand_vision, name, category, type, packaging, size, formate, market, price, benchmark, web_link, age_gp, gender, tg_user_occup, smell, oflactive_dir, ingredients, emotions, colors, dosage, price_range, ref_link,market_location,target_user_lifestyle,target_user_behaviour,status, created_date)
-//     VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,1, NOW())
-//   `;
-
-//   const values = [
-//     data.user_id,
-//     data.company_name,
-//     data.industry,
-//     data.brand_vision,
-//     data.name,
-//     data.category,
-//     data.type,
-//     data.packaging,
-//     data.size,
-//     data.formate,
-//     data.market,
-//     data.price,
-//     data.benchmark,
-//     data.web_link,
-//     data.age_gp,
-//     data.gender,
-//     data.tg_user_occup,
-//     data.smell,
-//     data.oflactive_dir,
-//     data.ingredients,
-//     data.emotions,
-//     data.colors,
-//     data.dosage,
-//     data.price_range,
-//     data.ref_link,
-//     data.market_location,
-//     data.target_user_lifestyle,
-//     data.target_user_behaviour,
-//   ];
-//     pool.query(query, values, (err, results) => {
-//         if(err) {
-//             console.error('Error creating user: ', err.message)
-//             res.status(500).send({
-//                 success: false,
-//                 message: 'Error creating user'
-//             })
-//         }
-//         else {
-//             res.status(200).send({
-//                 success: true,
-//                 message: 'Client details created successfully'
-//             })
-//         }
-//     })
-// })
 
 app.post('/save_client_briefing', async (req, res) => {
   const data = req.body;
@@ -944,6 +791,479 @@ app.get('/test', async (req, res) => {
     })
 
 })
+
+
+app.get('/admincategorylist', async (req, res) => {
+  const { type, catId } = req.query;
+
+  let query = 'SELECT * FROM category ';
+
+  if (type) {
+    try {
+      switch (type) {
+        case 'category':
+          query = 'SELECT * FROM category';
+          break;
+        case 'type':
+          query = `SELECT * FROM product_types WHERE category=${catId}`;
+          break;
+        case 'packaging':
+          query = `SELECT * FROM product_packaging WHERE  category=${catId}`;
+          break;
+        // ... other cases ...
+        case 'formate':
+        query = `SELECT * FROM product_formate WHERE category=${catId}`;
+        break;
+        case 'market':
+            query = 'SELECT * FROM product_market';
+            break;
+        case 'ingredients':
+            query = 'SELECT * FROM fragrance_ingredients';
+            break; 
+        case 'ingredientscontent':
+          query = 'fragrance_ingredients';
+          break;         
+        case 'emotions':
+            query = 'SELECT * FROM fragrance_emotions';
+            break;   
+        case 'colors':
+            query = 'SELECT * FROM fragrance_colors';
+            break;        
+        case 'oflactive_dir':
+            query = 'SELECT * FROM fragrance_olfa_dir';
+            break;                 
+        case 'smell':
+            query = 'SELECT * FROM fragrance_smell';
+            break;  
+        default:
+          // Handle unknown type
+          res.status(400).send({
+            success: false,
+            message: 'Invalid category type',
+          });
+          return;
+      }
+
+      // Execute the query using the promise-based API
+      const results = await executeQuery(query);
+
+      if (type === 'market') {
+        for (let index = 0; index < results.length; index++) {
+          const marketEntry = results[index];
+          const locationQuery = `
+            SELECT id, name
+            FROM locations
+            WHERE id IN (${marketEntry.location})
+          `;
+
+          // Execute the location query for each market entry
+          const locationResults = await executeQuery(locationQuery);
+
+          // Add location data to market entry
+          results[index].location_data = locationResults;
+        }
+      }
+
+      if (type === 'ingredients') {
+        for (let index = 0; index < results.length; index++) {
+          const marketEntry = results[index];
+          const locationQuery = `
+            SELECT id, name, image
+            FROM fragrance_ingredients_images
+            WHERE id IN (${marketEntry.ingradient_id})
+          `;
+
+          // Execute the location query for each market entry
+          const locationResults = await executeQuery(locationQuery);
+
+          // Add location data to market entry
+          results[index].location_data = locationResults;
+        }
+      }
+
+      res.status(200).send({
+        success: true,
+        message: `Fetching ${type} successful`,
+        data: results,
+      });
+    } catch (err) {
+      console.error(`Error fetching ${type}: `, err.message);
+      res.status(500).send({
+        success: false,
+        message: `Error fetching ${type}`,
+      });
+    }
+  }
+});
+
+// add new api 
+app.post('/addnewProduct/:type', upload.array('images', 10), async (req, res) => {
+  const type = req.params.type;
+  const prod_name = req.body.name;
+  const images = req.files; // This contains information about the uploaded images
+  try {
+      let tableName;
+      switch (type) {
+        case 'category':
+          tableName = 'category';
+          break;
+        case 'type':
+          tableName = 'product_types';
+          break;
+        case 'packaging':
+          tableName = `product_packaging`;
+          break;
+        case 'formate':
+          tableName = `product_formate`;
+          break;
+        case 'market':
+          tableName = 'product_market';
+          break;
+        case 'ingredients':
+          tableName = 'fragrance_ingredients_images';
+          break;
+        case 'emotions':
+          tableName = 'fragrance_emotions';
+          break;
+        case 'colors':
+          tableName = 'fragrance_colors';
+          break;
+        case 'oflactive_dir':
+          tableName = 'fragrance_olfa_dir';
+          break;
+        case 'smell':
+          tableName = 'fragrance_smell';
+        // Add more cases for different types if needed
+        default:
+              tableName = '';
+      }
+      const insertQuery = `
+          INSERT INTO ${tableName} (name, image, status, created_date)
+          VALUES (?, ?, '1', NOW())
+      `;
+
+      const results = [];
+
+      for (let i = 0; i < prod_name.length; i++) {
+          const name = prod_name[i];
+          const image = images[i];
+
+          const insertValues = [
+              name,
+              image.filename,
+          ];
+         console.log(insertValues)
+          const insertResult = await pool.query(insertQuery, insertValues);
+          results.push(insertResult);
+      }
+
+      res.status(200).send({
+          success: true,
+          message: 'Categories created successfully',
+          data: results,
+      });
+
+  } catch (error) {
+      console.error('Error creating categories:', error.message);
+      res.status(500).send({
+          success: false,
+          message: 'Error creating categories',
+      });
+  }
+});
+
+app.post('/updateProduct/:type/:id', upload.array('images',10), async (req, res) => {
+  const type = req.params.type;
+  const id = req.params.id;
+  const productName = req.body.name;
+  const imagename = req.files;
+
+  try {
+    let tableName;
+    switch (type) {
+      case 'category':
+        tableName = 'category';
+        break;
+      case 'type':
+        tableName = 'product_types';
+        break;
+      case 'packaging':
+        tableName = 'product_packaging';
+        break;
+      case 'formate':
+        tableName = 'product_formate';
+        break;
+      case 'market':
+        tableName = 'product_market';
+        break;
+      case 'ingredients':
+        tableName = 'fragrance_ingredients_images';
+        break;
+      case 'emotions':
+        tableName = 'fragrance_emotions';
+        break;
+      case 'colors':
+        tableName = 'fragrance_colors';
+        break;
+      case 'oflactive_dir':
+        tableName = 'fragrance_olfa_dir';
+        break;
+      case 'smell':
+        tableName = 'fragrance_smell';
+        break;
+      // Add more cases for different types if needed
+      default:
+        tableName = '';
+    }
+
+    if (tableName) {
+    
+        try {
+          let updateQuery;
+          let updateValues;
+    
+          if (imagename && imagename[0] && imagename[0].filename) {
+              // If an image is uploaded, update both name and image
+              updateQuery = `
+                  UPDATE ${tableName}
+                  SET name = ?, image = ?, status = '1'
+                  WHERE id = ?;
+              `;
+              updateValues = [
+                productName,
+                  imagename[0].filename, // Save the new filename in the database
+                  id,
+              ];
+          } else {
+              // If no image is uploaded, update only the name
+              updateQuery = `
+                  UPDATE ${tableName}
+                  SET name = ?, status = '1'
+                  WHERE id = ?;
+              `;
+              updateValues = [
+                productName,
+                  id,
+              ];
+          }    
+          // Execute the update query
+          const updateResults = await pool.query(updateQuery, updateValues);
+          
+          if (updateResults) {
+              const queryCategory =  `SELECT * FROM ${tableName} WHERE status = 1`;
+              const results = await executeQuery(queryCategory);
+              res.status(200).send({
+                  success: true,
+                  message: 'data updated successfully',
+                  data: results,
+              });
+          } else {
+              res.status(500).send({
+                  success: false,
+                  message: 'Error updating category',
+              });
+          }
+      } catch (error) {
+          console.error('Error updating category:', error.message);
+          res.status(500).send({
+              success: false,
+              message: 'Error updating category',
+          });
+      }
+
+
+    } else {
+      res.status(400).send({
+        success: false,
+        message: 'Invalid type specified',
+      });
+    }
+  } catch (error) {
+    console.error('Error updating categories:', error.message);
+    res.status(500).send({
+      success: false,
+      message: 'Error updating categories',
+    });
+  }
+});
+
+app.post('/deleteProduct/:type/:id', upload.array('images', 10), async (req, res) => {
+  const type = req.params.type;
+  const id = req.body.id;
+  try {
+      let tableName;
+      switch (type) {
+        case 'category':
+          tableName = 'category';
+          break;
+        case 'type':
+          tableName = 'product_types';
+          break;
+        case 'packaging':
+          tableName = `product_packaging`;
+          break;
+        case 'formate':
+          tableName = `product_formate`;
+          break;
+        case 'market':
+          tableName = 'product_market';
+          break;
+        case 'ingredients':
+          tableName = 'fragrance_ingredients_images';
+          break;
+        case 'emotions':
+          tableName = 'fragrance_emotions';
+          break;
+        case 'colors':
+          tableName = 'fragrance_colors';
+          break;
+        case 'oflactive_dir':
+          tableName = 'fragrance_olfa_dir';
+          break;
+        case 'smell':
+          tableName = 'fragrance_smell';
+        // Add more cases for different types if needed
+        default:
+              tableName = '';
+      }
+      if (tableName) {
+        const deleteQuery = `DELETE FROM ${tableName} WHERE id = ?`;
+  
+        // Execute the delete query
+        const deleteResult = await pool.query(deleteQuery, [id]);
+        if(deleteResult){
+        const queryCategory =  `SELECT * FROM ${tableName} WHERE status = 1`;
+        const results = await executeQuery(queryCategory);
+
+        res.status(200).send({
+          success: true,
+          message: 'deleted successfully',
+          data: results,
+        });
+      }else{
+        res.status(400).send({
+          success: false,
+          message: 'Invalid type specified',
+          data: [],
+        });  
+      }
+      } else {
+        res.status(400).send({
+          success: false,
+          message: 'Invalid type specified',
+        });
+      }
+
+  } catch (error) {
+      console.error('Error creating categories:', error.message);
+      res.status(500).send({
+          success: false,
+          message: 'Error creating categories',
+      });
+  }
+});
+
+app.get('/categoryingradients', async (req, res) => {
+  let query = 'SELECT * FROM fragrance_ingredients';
+    try {
+      // Execute the query using the promise-based API
+      
+      const results = await executeQuery(query);
+      res.status(200).send({
+        success: true,
+        message: `Fetching ingradient successful`,
+        data: results,
+      });
+      
+    } catch (err) {
+      console.error(`Error fetching ingradient: `, err.message);
+      res.status(500).send({
+        success: false,
+        message: `Error fetching ingradient`,
+      });
+    }
+});
+app.post('/assigningradients', async (req, res) => {
+  const { id,ingradient_id} = req.body;
+  let updateQuery ;
+  let updateValues;
+  updateQuery = `
+  UPDATE fragrance_ingredients
+  SET ingradient_id = ?, status = '1'
+  WHERE id = ?;
+`;
+updateValues = [
+  ingradient_id,
+  id,
+];
+const updateResults = await pool.query(updateQuery, updateValues);
+
+    try {
+      let query = 'SELECT * FROM fragrance_ingredients';
+      const results = await executeQuery(query);
+
+      // Execute the query using the promise-based API
+      res.status(200).send({
+        success: true,
+        message: `Update data  successful`,
+        data: results,
+      });
+      
+    } catch (err) {
+      console.error(`Error fetching data: `, err.message);
+      res.status(500).send({
+        success: false,
+        message: `Error fetching data`,
+      });
+    }
+});
+
+app.get('/getindustry', async (req, res) => {
+  let query = 'SELECT * FROM industry';
+    try {
+      // Execute the query using the promise-based API
+      const results = await executeQuery(query);
+      res.status(200).send({
+        success: true,
+        message: `Fetching ingradient successful`,
+        data: results,
+      });
+    } catch (err) {
+      console.error(`Error fetching ingradient: `, err.message);
+      res.status(500).send({
+        success: false,
+        message: `Error fetching ingradient`,
+      });
+    }
+});
+app.post('/addnewIndustry/', async (req, res) => {
+  const prod_name = req.body.name;
+  try {
+      const insertQuery = `
+          INSERT INTO industry (name, status, created_at)
+          VALUES (?, '1', NOW())
+      `;
+      const insertValues = [
+        prod_name,
+        
+    ];
+    const insertResult = await pool.query(insertQuery, insertValues);
+
+      res.status(200).send({
+          success: true,
+          message: 'Categories created successfully',
+          data: insertResult,
+      });
+
+  } catch (error) {
+      console.error('Error creating categories:', error.message);
+      res.status(500).send({
+          success: false,
+          message: 'Error creating categories',
+      });
+  }
+});
+
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
 })
