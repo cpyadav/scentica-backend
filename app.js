@@ -805,14 +805,14 @@ app.get('/admincategorylist', async (req, res) => {
           query = 'SELECT * FROM category';
           break;
         case 'type':
-          query = `SELECT * FROM product_types WHERE category=${catId}`;
+          query = `SELECT * FROM product_types`;
           break;
         case 'packaging':
-          query = `SELECT * FROM product_packaging WHERE  category=${catId}`;
+          query = `SELECT * FROM product_packaging`;
           break;
         // ... other cases ...
         case 'formate':
-        query = `SELECT * FROM product_formate WHERE category=${catId}`;
+        query = `SELECT * FROM product_formate WHERE`;
         break;
         case 'market':
             query = 'SELECT * FROM product_market';
@@ -952,17 +952,25 @@ app.post('/addnewProduct/:type', upload.array('images', 10), async (req, res) =>
               name,
               image.filename,
           ];
-         console.log(insertValues)
           const insertResult = await pool.query(insertQuery, insertValues);
           results.push(insertResult);
       }
 
+    const queryCategory = `SELECT * FROM ${tableName} WHERE status = 1`;
+    const resultData = await executeQuery(queryCategory);
+    if (results && results.length > 0) {
       res.status(200).send({
-          success: true,
-          message: 'Categories created successfully',
-          data: results,
+        success: true,
+        message: 'data updated successfully',
+        data: resultData,
       });
-
+    } else {
+      res.status(500).send({
+        success: false,
+        message: 'Error updating category',
+      });
+    }
+      
   } catch (error) {
       console.error('Error creating categories:', error.message);
       res.status(500).send({
