@@ -812,7 +812,7 @@ app.get('/admincategorylist', async (req, res) => {
           break;
         // ... other cases ...
         case 'formate':
-        query = `SELECT * FROM product_formate WHERE`;
+        query = `SELECT * FROM product_formate`;
         break;
         case 'market':
             query = 'SELECT * FROM product_market';
