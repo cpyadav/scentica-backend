@@ -821,7 +821,7 @@ app.get('/admincategorylist', async (req, res) => {
             query = 'SELECT * FROM fragrance_ingredients';
             break; 
         case 'ingredientscontent':
-          query = 'fragrance_ingredients';
+          query = 'fragrance_ingredients_images';
           break;         
         case 'emotions':
             query = 'SELECT * FROM fragrance_emotions';
