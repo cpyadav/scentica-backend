@@ -831,7 +831,10 @@ app.get('/admincategorylist', async (req, res) => {
             break;        
         case 'oflactive_dir':
             query = 'SELECT * FROM fragrance_olfa_dir';
-            break;                 
+            break;   
+        case 'industry':
+          query = 'industry';   
+          break;                      
         case 'smell':
             query = 'SELECT * FROM fragrance_smell';
             break;  
@@ -897,9 +900,10 @@ app.get('/admincategorylist', async (req, res) => {
 });
 
 // add new api 
-app.post('/addnewProduct/:type', upload.array('images', 10), async (req, res) => {
+app.post('/addnewProduct/:type/', upload.array('images', 10), async (req, res) => {
   const type = req.params.type;
   const prod_name = req.body.name;
+  const category = req.body &&  req.body.category ? req.body.category  : '';
   const images = req.files; // This contains information about the uploaded images
   try {
       let tableName;
@@ -937,26 +941,40 @@ app.post('/addnewProduct/:type', upload.array('images', 10), async (req, res) =>
         default:
               tableName = '';
       }
-      const insertQuery = `
-          INSERT INTO ${tableName} (name, image, status, created_date)
-          VALUES (?, ?, '1', NOW())
-      `;
+    if (category) {
+      var insertQuery = `
+        INSERT INTO ${tableName} (category,name, image, status, created_date)
+        VALUES (?, ?, ?, '1', NOW())
+    `;
+    } else {
+      var insertQuery = `
+        INSERT INTO ${tableName} (name, image, status, created_date)
+        VALUES (?, ?, '1', NOW())
+    `;
+    }
 
-      const results = [];
+    const results = [];
 
-      for (let i = 0; i < prod_name.length; i++) {
-          const name = prod_name[i];
-          const image = images[i];
-
-          const insertValues = [
-              name,
-              image.filename,
-          ];
-          const insertResult = await pool.query(insertQuery, insertValues);
-          results.push(insertResult);
+    for (let i = 0; i < prod_name.length; i++) {
+      const name = prod_name[i];
+      const image = images[i];
+      if (category) {
+        var insertValues = [
+          category,
+          name,
+          image.filename,
+        ];
+      } else {
+        var insertValues = [
+          name,
+          image.filename,
+        ];
       }
+      const insertResult = await pool.query(insertQuery, insertValues);
+      results.push(insertResult);
+    }
 
-    const queryCategory = `SELECT * FROM ${tableName} WHERE status = 1`;
+    const queryCategory = `SELECT * FROM ${tableName}`;
     const resultData = await executeQuery(queryCategory);
     if (results && results.length > 0) {
       res.status(200).send({
@@ -1095,9 +1113,9 @@ app.post('/updateProduct/:type/:id', upload.array('images',10), async (req, res)
   }
 });
 
-app.post('/deleteProduct/:type/:id', upload.array('images', 10), async (req, res) => {
+app.post('/deleteProduct/:type/:id', async (req, res) => {
   const type = req.params.type;
-  const id = req.body.id;
+  const id = req.params.id;
   try {
       let tableName;
       switch (type) {
@@ -1117,8 +1135,11 @@ app.post('/deleteProduct/:type/:id', upload.array('images', 10), async (req, res
           tableName = 'product_market';
           break;
         case 'ingredients':
-          tableName = 'fragrance_ingredients_images';
+          tableName = 'fragrance_ingredients';
           break;
+        case 'ingredientscontent':
+          tableName = 'fragrance_ingredients_images';
+          break;   
         case 'emotions':
           tableName = 'fragrance_emotions';
           break;
@@ -1128,6 +1149,9 @@ app.post('/deleteProduct/:type/:id', upload.array('images', 10), async (req, res
         case 'oflactive_dir':
           tableName = 'fragrance_olfa_dir';
           break;
+          case 'industry':
+            tableName = 'industry';
+            break;  
         case 'smell':
           tableName = 'fragrance_smell';
         // Add more cases for different types if needed
@@ -1256,12 +1280,50 @@ app.post('/addnewIndustry/', async (req, res) => {
         
     ];
     const insertResult = await pool.query(insertQuery, insertValues);
-
-      res.status(200).send({
+      if(insertResult){
+        const queryCategory =  `SELECT * FROM industry ORDER BY created_date DESC`;
+        const results = await executeQuery(queryCategory);
+        res.status(200).send({
           success: true,
           message: 'Categories created successfully',
-          data: insertResult,
+          data: results,
       });
+      }
+  } catch (error) {
+      console.error('Error creating categories:', error.message);
+      res.status(500).send({
+          success: false,
+          message: 'Error creating categories',
+      });
+  }
+});
+app.post('/addnewIngradient/', async (req, res) => {
+  const prod_name = req.body.name;
+  try {
+      const insertQuery = `
+          INSERT INTO fragrance_ingredients (name, ingradient_id, status, created_date)
+          VALUES (?,'', '1', NOW())
+      `;
+      const insertValues = [
+        prod_name,
+        
+    ];
+    const insertResult = await pool.query(insertQuery, insertValues);
+    if(insertResult){
+      const queryCategory =  `SELECT * FROM fragrance_ingredients ORDER BY created_date DESC`;
+      const results = await executeQuery(queryCategory);
+  
+        res.status(200).send({
+            success: true,
+            message: 'Categories created successfully',
+            data: results,
+        });
+    }else{
+      res.status(500).send({
+          success: false,
+          message: 'Error creating categories',
+      });
+    }
 
   } catch (error) {
       console.error('Error creating categories:', error.message);
