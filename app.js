@@ -1297,31 +1297,36 @@ app.post('/addnewIndustry/', async (req, res) => {
       });
   }
 });
-app.post('/addnewIngradient/', async (req, res) => {
+app.post('/addnewIngradient/',upload.array('name'), async (req, res) => {
   const prod_name = req.body.name;
   try {
-      const insertQuery = `
+      var insertQuery = `
           INSERT INTO fragrance_ingredients (name, ingradient_id, status, created_date)
           VALUES (?,'', '1', NOW())
       `;
-      const insertValues = [
-        prod_name,
-        
-    ];
-    const insertResult = await pool.query(insertQuery, insertValues);
-    if(insertResult){
-      const queryCategory =  `SELECT * FROM fragrance_ingredients ORDER BY created_date DESC`;
-      const results = await executeQuery(queryCategory);
-  
-        res.status(200).send({
-            success: true,
-            message: 'Categories created successfully',
-            data: results,
-        });
-    }else{
+    const results = [];
+
+    for (let i = 0; i < prod_name.length; i++) {
+      const name = prod_name[i];     
+        var insertValues = [
+          name
+        ];
+      const insertResult = await pool.query(insertQuery, insertValues);
+      results.push(insertResult);
+    }
+
+    const queryCategory = `SELECT * FROM fragrance_ingredients`;
+    const resultData = await executeQuery(queryCategory);
+    if (resultData && resultData.length > 0) {
+      res.status(200).send({
+        success: true,
+        message: 'data updated successfully',
+        data: resultData,
+      });
+    } else {
       res.status(500).send({
-          success: false,
-          message: 'Error creating categories',
+        success: false,
+        message: 'Error updating category',
       });
     }
 
