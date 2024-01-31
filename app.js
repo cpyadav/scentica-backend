@@ -853,34 +853,43 @@ app.get('/admincategorylist', async (req, res) => {
       if (type === 'market') {
         for (let index = 0; index < results.length; index++) {
           const marketEntry = results[index];
-          const locationQuery = `
+          if(marketEntry.location !=''){
+            const locationQuery = `
             SELECT id, name
             FROM locations
             WHERE id IN (${marketEntry.location})
           `;
-
           // Execute the location query for each market entry
           const locationResults = await executeQuery(locationQuery);
 
           // Add location data to market entry
           results[index].location_data = locationResults;
+          }else{
+            results[index].location_data = [];
+          }
+          
         }
       }
 
       if (type === 'ingredients') {
         for (let index = 0; index < results.length; index++) {
           const marketEntry = results[index];
-          const locationQuery = `
+          if (marketEntry.ingradient_id != '') {
+            const locationQuery = `
             SELECT id, name, image
             FROM fragrance_ingredients_images
             WHERE id IN (${marketEntry.ingradient_id})
           `;
 
-          // Execute the location query for each market entry
-          const locationResults = await executeQuery(locationQuery);
+            // Execute the location query for each market entry
+            const locationResults = await executeQuery(locationQuery);
 
-          // Add location data to market entry
-          results[index].location_data = locationResults;
+            // Add location data to market entry
+            results[index].location_data = locationResults;
+          }else{
+            results[index].location_data = [];
+          }
+
         }
       }
 
@@ -923,7 +932,7 @@ app.post('/addnewProduct/:type/', upload.array('images', 10), async (req, res) =
         case 'market':
           tableName = 'product_market';
           break;
-        case 'ingredients':
+        case 'ingredientscontent':
           tableName = 'fragrance_ingredients_images';
           break;
         case 'emotions':
@@ -937,6 +946,7 @@ app.post('/addnewProduct/:type/', upload.array('images', 10), async (req, res) =
           break;
         case 'smell':
           tableName = 'fragrance_smell';
+        break;  
         // Add more cases for different types if needed
         default:
               tableName = '';
