@@ -821,7 +821,7 @@ app.get('/admincategorylist', async (req, res) => {
             query = 'SELECT * FROM fragrance_ingredients';
             break; 
         case 'ingredientscontent':
-          query = 'fragrance_ingredients_images';
+          query = 'SELECT * FROM fragrance_ingredients_images';
           break;         
         case 'emotions':
             query = 'SELECT * FROM fragrance_emotions';
@@ -1154,6 +1154,7 @@ app.post('/deleteProduct/:type/:id', async (req, res) => {
             break;  
         case 'smell':
           tableName = 'fragrance_smell';
+          break;   
         // Add more cases for different types if needed
         default:
               tableName = '';
