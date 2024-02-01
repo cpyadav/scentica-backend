@@ -455,34 +455,40 @@ app.get('/categorylist', async (req, res) => {
       if (type === 'market') {
         for (let index = 0; index < results.length; index++) {
           const marketEntry = results[index];
-          const locationQuery = `
+          if(marketEntry && marketEntry.location !=''){
+            const locationQuery = `
             SELECT id, name
             FROM locations
             WHERE id IN (${marketEntry.location})
           `;
-
           // Execute the location query for each market entry
           const locationResults = await executeQuery(locationQuery);
-
           // Add location data to market entry
           results[index].location_data = locationResults;
+          }else{
+            results[index].location_data = [];
+          }
+          
         }
       }
 
       if (type === 'ingredients') {
         for (let index = 0; index < results.length; index++) {
           const marketEntry = results[index];
-          const locationQuery = `
+          if (marketEntry && marketEntry.ingradient_id != '') {
+            const locationQuery = `
             SELECT id, name, image
             FROM fragrance_ingredients_images
             WHERE id IN (${marketEntry.ingradient_id})
           `;
+            // Execute the location query for each market entry
+            const locationResults = await executeQuery(locationQuery);
+            // Add location data to market entry
+            results[index].location_data = locationResults;
+          } else {
+            results[index].location_data = [];
+          }
 
-          // Execute the location query for each market entry
-          const locationResults = await executeQuery(locationQuery);
-
-          // Add location data to market entry
-          results[index].location_data = locationResults;
         }
       }
 
