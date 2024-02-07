@@ -919,7 +919,7 @@ app.post('/addnewProduct/:type/', upload.array('images', 10), async (req, res) =
   const type = req.params.type;
   const prod_name = req.body.name;
   const category = req.body &&  req.body.category ? req.body.category  : '';
-  const images = req.files; // This contains information about the uploaded images
+  const images = req &&  req.files != undefined ? req.files : []; // This contains information about the uploaded images
   try {
       let tableName;
       switch (type) {
@@ -973,17 +973,17 @@ app.post('/addnewProduct/:type/', upload.array('images', 10), async (req, res) =
 
     for (let i = 0; i < prod_name.length; i++) {
       const name = prod_name[i];
-      const image = images[i];
+      const image = images && images.length> 0 ? images[i].filename : '';
       if (category) {
         var insertValues = [
           category,
           name,
-          image.filename,
+          image,
         ];
       } else {
         var insertValues = [
           name,
-          image.filename,
+          image,
         ];
       }
       const insertResult = await pool.query(insertQuery, insertValues);
