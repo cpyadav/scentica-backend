@@ -54,7 +54,12 @@ const pool = mysql.createPool(dbConfig);
   });
   
   const generatePDF = async (data,userDetails) => {
-    const browser = await puppeteer.launch();
+    //const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+      args: ['--no-sandbox'],
+      defaultViewport: null,
+      ignoreHTTPSErrors: true,
+    });
     const page = await browser.newPage();
     // console.log("dddddd ===== ",data);
     // console.log("userDetails",userDetails);
@@ -1725,21 +1730,7 @@ app.post('/addnewIngradient/',upload.array('name'), async (req, res) => {
       });
   }
 });
-async function runPuppeteer() {
-  try {
-    const browser = await puppeteer.launch({
-      args: ['--no-sandbox'],
-    });
 
-    // Your Puppeteer logic here...
-
-    await browser.close();
-  } catch (error) {
-    console.error('Error in Puppeteer:', error);
-  }
-}
-
-runPuppeteer();
 
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
