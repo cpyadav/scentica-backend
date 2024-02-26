@@ -1725,6 +1725,21 @@ app.post('/addnewIngradient/',upload.array('name'), async (req, res) => {
       });
   }
 });
+async function runPuppeteer() {
+  try {
+    const browser = await puppeteer.launch({
+      args: ['--no-sandbox'],
+    });
+
+    // Your Puppeteer logic here...
+
+    await browser.close();
+  } catch (error) {
+    console.error('Error in Puppeteer:', error);
+  }
+}
+
+runPuppeteer();
 
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
