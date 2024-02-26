@@ -23,96 +23,18 @@ const secretKey = 'your_secret_key_20006';
 const secretKeyAdmin = 'your_secret_key2024';
 const saltRounds = 10;
 app.use(session({ secret: 'test123', resave: true, saveUninitialized: true }))
-app.use(cors());
+
+const corsOptions = {
+  origin: 'http://devstaging.in', // Replace with your frontend URL
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true, // Enable credentials (cookies, authorization headers)
+  optionsSuccessStatus: 204,
+};
+app.use(cors(corsOptions));
 // Create a connection pool
 const pool = mysql.createPool(dbConfig);
 
 // Routes
-
-
-// app.post('/send-email__nn', async (req, res) => {
-//     try {
-//       // Generate PDF from HTML
-  
-//       // Send email with PDF attachment
-//       const ss =`<!DOCTYPE html>
-// <html lang="en">
-// <head>
-//   <meta charset="UTF-8">
-//   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-//   <title>HTML to PDF</title>
-//   <style>
-//     body {
-//       font-family: 'Arial', sans-serif;
-//       background-color: #f4f4f4;
-//       margin: 0;
-//       padding: 0;
-//     }
-
-//     .container {
-//       max-width: 600px;
-//       margin: 20px auto;
-//       background-color: #ffffff;
-//       box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-//       padding: 20px;
-//     }
-
-//     h1, h2, p {
-//       margin-bottom: 10px;
-//     }
-
-//     a {
-//       color: #3498db;
-//       text-decoration: none;
-//     }
-
-//     a:hover {
-//       text-decoration: underline;
-//     }
-//   </style>
-// </head>
-// <body>
-//   <div class="container">
-//     <h1>Your PDF Title</h1>
-
-//     <p>This is an example HTML content that you can convert to a PDF. Customize the content as needed.</p>
-
-//     <h2>Section 1</h2>
-//     <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla facilisi. Suspendisse potenti.</p>
-
-//     <h2>Section 2</h2>
-//     <p>Curabitur non nulla sit amet nisl tempus convallis quis ac lectus. Cras ultricies ligula sed magna dictum porta.</p>
-
-//     <p>For more information, visit our <a href="https://www.example.com">website</a>.</p>
-//   </div>
-// </body>
-// </html>
-// `
-
-//   const sendEmail1 = async (to, subject, text, pdfBuffer) => {
-//     const transporter = nodemailer.createTransport({
-//       service: 'gmail',
-//       auth: {
-//         user: 'cpyadav2010@gmail.com', // replace with your email
-//         pass: 'rmds ekus bdmt erqf', // replace with your password
-//       },
-//     });
-  
-//     const mailOptions = {
-//       from: 'cpyadav2010@gmail.com',
-//       to: 'cpyadav2010@gmail.com',
-//       subject: subject,
-//       text: text,
-//       attachments: [
-//         {
-//           filename: 'document.pdf',
-//           content: pdfBuffer,
-//         },
-//       ],
-//     };
-  
-//     await transporter.sendMail(mailOptions);
-//   };
 
   app.post('/send-email', async (req, res) => {
     try {
