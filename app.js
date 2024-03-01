@@ -24,10 +24,24 @@ const secretKeyAdmin = 'your_secret_key2024';
 const saltRounds = 10;
 app.use(session({ secret: 'test123', resave: true, saveUninitialized: true }))
 
+// const corsOptions = {
+//   origin: 'http://devstaging.in', // Replace with your frontend URL
+//   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+//   credentials: true, // Enable credentials (cookies, authorization headers)
+//   optionsSuccessStatus: 204,
+// };
 const corsOptions = {
-  origin: 'http://devstaging.in', // Replace with your frontend URL
+  origin: function (origin, callback) {
+    const allowedOrigins = ['http://devstaging.in', 'http://admin.devstaging.in'];
+
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  credentials: true, // Enable credentials (cookies, authorization headers)
+  credentials: true,
   optionsSuccessStatus: 204,
 };
 app.use(cors(corsOptions));
