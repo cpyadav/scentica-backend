@@ -32,7 +32,7 @@ app.use(session({ secret: 'test123', resave: true, saveUninitialized: true }))
 // };
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = ['http://devstaging.in', 'http://admin.devstaging.in'];
+    const allowedOrigins = ['http://devstaging.in', 'http://admin.devstaging.in','http://api.devstaging.in'];
 
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
