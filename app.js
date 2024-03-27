@@ -343,7 +343,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
-app.post('/adminlogin', async (req, res) => {
+app.post('/adminlogin',cors(corsOptions), async (req, res) => {
   const { email, password } = req.body;
 
   try {
