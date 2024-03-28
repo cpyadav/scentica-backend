@@ -30,10 +30,9 @@ app.use(session({ secret: 'test123', resave: true, saveUninitialized: true }))
 //   credentials: true, // Enable credentials (cookies, authorization headers)
 //   optionsSuccessStatus: 204,
 // };
+const allowedOrigins = ['http://devstaging.in', 'http://admin.devstaging.in', 'http://api.devstaging.in'];
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = ['http://devstaging.in', 'http://admin.devstaging.in','http://api.devstaging.in'];
-
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -44,6 +43,7 @@ const corsOptions = {
   credentials: true,
   optionsSuccessStatus: 204,
 };
+
 app.use(cors(corsOptions));
 // Create a connection pool
 const pool = mysql.createPool(dbConfig);
