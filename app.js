@@ -30,21 +30,21 @@ app.use(session({ secret: 'test123', resave: true, saveUninitialized: true }))
 //   credentials: true, // Enable credentials (cookies, authorization headers)
 //   optionsSuccessStatus: 204,
 // };
-const allowedOrigins = ['http://devstaging.in', 'http://admin.devstaging.in', 'http://api.devstaging.in'];
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  credentials: true,
-  optionsSuccessStatus: 204,
-};
+// const allowedOrigins = ['http://devstaging.in', 'http://admin.devstaging.in', 'http://api.devstaging.in'];
+// const corsOptions = {
+//   origin: function (origin, callback) {
+//     if (!origin || allowedOrigins.includes(origin)) {
+//       callback(null, true);
+//     } else {
+//       callback(new Error('Not allowed by CORS'));
+//     }
+//   },
+//   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+//   credentials: true,
+//   optionsSuccessStatus: 204,
+// };
 
-app.use(cors(corsOptions));
+// app.use(cors(corsOptions));
 // Create a connection pool
 const pool = mysql.createPool(dbConfig);
 
